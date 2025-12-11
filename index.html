@@ -171,22 +171,6 @@
       flex-wrap: wrap;
     }
 
-    .xml-preview {
-      width: 100%;
-      min-height: 200px;
-      max-height: 350px;
-      resize: vertical;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.8rem;
-      background: #111827;
-      color: #e5e7eb;
-      overflow: auto;
-      box-sizing: border-box;
-    }
-
     .invoice-header-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -214,7 +198,7 @@
       <div class="flex-between">
         <div>
           <h2>1. Cargar archivo XML de inventario / facturación</h2>
-          <p>Selecciona el archivo XML que exporta tu sistema. Primero se mostrará el contenido y una vista de factura.</p>
+          <p>Selecciona el archivo XML que exporta tu sistema. Verás el resumen de la factura y el detalle de productos.</p>
         </div>
         <span class="badge">Beta · XML</span>
       </div>
@@ -231,18 +215,9 @@
       <div class="status" id="statusText">Sin archivo cargado.</div>
     </section>
 
-    <!-- 2. Vista previa XML crudo -->
+    <!-- 2. Vista entendible de la factura -->
     <section>
-      <h2>2. Vista previa del XML (crudo)</h2>
-      <p>XML tal cual viene del sistema. Útil para validar estructura y depurar.</p>
-      <div class="card">
-        <textarea id="xmlRaw" class="xml-preview" readonly placeholder="Aquí se mostrará el contenido del XML cargado..."></textarea>
-      </div>
-    </section>
-
-    <!-- 3. Vista entendible de la factura -->
-    <section>
-      <h2>3. Vista entendible de la facturación</h2>
+      <h2>2. Vista de la facturación</h2>
       <p>Resumen de la factura: folio, fechas, emisor, receptor y detalle de productos antes de tocar el stock.</p>
       <div class="card">
         <div id="invoiceHeaderPreview">
@@ -269,10 +244,10 @@
       </div>
     </section>
 
-    <!-- 4. Tabla de inventario (para actualizar stock) -->
+    <!-- 3. Tabla de inventario (para actualizar stock) -->
     <section>
       <div class="flex-between">
-        <h2>4. Revisar y ajustar cantidades para inventario</h2>
+        <h2>3. Revisar y ajustar cantidades para inventario</h2>
         <button class="secondary" id="btnLimpiarTabla">Limpiar tabla</button>
       </div>
       <p>Después de procesar el XML, revisa las líneas detectadas que afectarán el stock.</p>
@@ -284,7 +259,7 @@
               <th>Actualizar</th>
               <th>SKU / Código</th>
               <th>Descripción</th>
-              <th>Cantidad XML</hth>
+              <th>Cantidad XML</th>
               <th>Nueva Cantidad</th>
             </tr>
           </thead>
@@ -295,9 +270,9 @@
       </div>
     </section>
 
-    <!-- 5. Envío a API -->
+    <!-- 4. Envío a API -->
     <section>
-      <h2>5. Enviar actualización a tu plataforma</h2>
+      <h2>4. Enviar actualización a tu plataforma</h2>
       <p>Configura el endpoint de tu API y envía las líneas seleccionadas.</p>
 
       <div class="card">
@@ -319,7 +294,7 @@
       </div>
     </section>
 
-    <!-- Log técnico -->
+    <!-- 5. Log técnico -->
     <section>
       <h2>Log técnico</h2>
       <p>Registra pasos de lectura, parseo del XML y errores.</p>
@@ -337,7 +312,6 @@
     const apiUrlInput = document.getElementById("apiUrl");
     const envioStatus = document.getElementById("envioStatus");
     const btnLimpiarTabla = document.getElementById("btnLimpiarTabla");
-    const xmlRawTextarea = document.getElementById("xmlRaw");
     const invoiceHeaderPreview = document.getElementById("invoiceHeaderPreview");
     const invoiceLinesPreviewBody = document.getElementById("invoiceLinesPreviewBody");
 
@@ -349,7 +323,6 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Helpers genéricos para leer tags / atributos
     function getTagOrAttr(node, names) {
       for (const name of names) {
         const el = node.getElementsByTagName(name)[0];
@@ -372,12 +345,11 @@
       return value.trim();
     }
 
-    // 1) Selección de archivo: leer, mostrar XML crudo y vista de factura
+    // 1) Selección de archivo: leer XML y mostrar vista de factura
     inputXml.addEventListener("change", () => {
       if (!inputXml.files || inputXml.files.length === 0) {
         statusText.textContent = "Sin archivo cargado.";
         btnProcesar.disabled = true;
-        xmlRawTextarea.value = "";
         currentXmlText = "";
         invoiceHeaderPreview.innerHTML = "<p>No hay XML cargado.</p>";
         invoiceLinesPreviewBody.innerHTML = "<tr><td colspan='5'>Sin datos de detalle.</td></tr>";
@@ -391,9 +363,8 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         currentXmlText = e.target.result;
-        xmlRawTextarea.value = currentXmlText;
-        statusText.textContent = "XML cargado. Vista previa y resumen de factura actualizados.";
-        log("XML leído correctamente y mostrado en la vista previa.");
+        statusText.textContent = "XML cargado. Vista de factura actualizada.";
+        log("XML leído correctamente.");
         btnProcesar.disabled = false;
 
         try {
@@ -450,12 +421,8 @@
       }
     });
 
-    /**
-     * Vista de factura: cabecera + detalle (para humanos).
-     * Se intenta soportar DTE chileno y estructuras genéricas.
-     */
+    // Vista de factura: cabecera + detalle
     function parseInvoicePreview(xmlDoc) {
-      // Header node típico: Encabezado, Header, Cabecera, etc.
       const headerTags = ["Encabezado", "Header", "Cabecera", "InvoiceHeader", "DocumentHeader"];
       let headerNode = null;
       for (const tag of headerTags) {
@@ -466,7 +433,6 @@
         }
       }
       if (!headerNode) {
-        // Fallback: en DTE chileno suele ser DTE > Documento > Encabezado
         const docNode = xmlDoc.getElementsByTagName("Documento")[0];
         const encNode = docNode && docNode.getElementsByTagName("Encabezado")[0];
         headerNode = encNode || xmlDoc.documentElement;
@@ -586,10 +552,7 @@
       }
     }
 
-    /**
-     * Parseo orientado a inventario (stock).
-     * Aquí puedes endurecer lógica según cómo venga tu XML.
-     */
+    // Parseo orientado a inventario (stock)
     function parseInventoryFromXml(xmlDoc) {
       const items = [];
 
