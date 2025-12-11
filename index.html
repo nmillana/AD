@@ -1,1 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Actualización de Stock desde XML</title>
 
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    header {
+      background: #111827;
+      color: #f9fafb;
+      padding: 16px 24px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 16px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    }
+
+    section {
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: #4b5563;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px 16px;
+      background: #f9fafb;
+      margin-bottom: 8px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input[type="file"] {
+      padding: 6px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #111827;
+      color: #f9fafb;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      margin-top: 8px;
+      color: #6b7280;
+      white-space: pre-line;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 0.85rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      max-height: 160px;
+      overflow: auto;
+      background: #0b1120;
+      color: #e5e7eb;
+      padding: 8px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .xml-preview {
+      width: 100%;
+      min-height: 200px;
+      max-height: 350px;
+      resize: vertical;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      background: #111827;
+      color: #e5e7eb;
+      overflow: auto;
+      box-sizing: border-box;
+    }
+
+    .invoice-header-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .invoice-header-grid div strong {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Actualización de Stock desde XML</h1>
+  </header>
+
+  <main>
+    <!-- 1. Carga de XML -->
+    <section>
+      <div class="flex-between">
+        <div>
+          <h2>1. Cargar archivo XML de inventario / facturación</h2>
+          <p>Selecciona el archivo XML que exporta tu sistema. Primero se mostrará el contenido y una vista de factura.</p>
+        </div>
+        <span class="badge">Beta · XML</span>
+      </div>
+
+      <div class="card row">
+        <div>
+          <label for="xmlFile">Archivo XML:</label>
+          <input type="file" id="xmlFile" accept=".xml,text/xml,application/xml" />
+        </div>
+        <div>
+          <button id="btnProcesar" disabled>Procesar XML a inventario</button>
+        </div>
+      </div>
+      <div class="status" id="statusText">Sin archivo cargado.</div>
+    </section>
+
+    <!-- 2. Vista previa XML crudo -->
+    <section>
+      <h2>2. Vista previa del XML (crudo)</h2>
+      <p>XML tal cual viene del sistema. Útil para validar estructura y depurar.</p>
+      <div class="card">
+        <textarea id="xmlRaw" class="xml-preview" readonly placeholder="Aquí se mostrará el contenido del XML cargado..."></textarea>
+      </div>
+    </section>
+
+    <!-- 3. Vista entendible de la factura -->
+    <section>
+      <h2>3. Vista entendible de la facturación</h2>
+      <p>Resumen de la factura: folio, fechas, emisor, receptor y detalle de productos antes de tocar el stock.</p>
+      <div class="card">
+        <div id="invoiceHeaderPreview">
+          <p>Cuando cargues un XML de factura, aquí verás el resumen (folio, fecha, emisor, receptor, total).</p>
+        </div>
+        <div style="margin-top:12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Total línea</th>
+              </tr>
+            </thead>
+            <tbody id="invoiceLinesPreviewBody">
+              <tr>
+                <td colspan="5">Sin datos de detalle aún.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Tabla de inventario (para actualizar stock) -->
+    <section>
+      <div class="flex-between">
+        <h2>4. Revisar y ajustar cantidades para inventario</h2>
+        <button class="secondary" id="btnLimpiarTabla">Limpiar tabla</button>
+      </div>
+      <p>Después de procesar el XML, revisa las líneas detectadas que afectarán el stock.</p>
+
+      <div class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Actualizar</th>
+              <th>SKU / Código</th>
+              <th>Descripción</th>
+              <th>Cantidad XML</hth>
+              <th>Nueva Cantidad</th>
+            </tr>
+          </thead>
+          <tbody id="tablaInventarioBody">
+            <!-- Filas generadas dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 5. Envío a API -->
+    <section>
+      <h2>5. Enviar actualización a tu plataforma</h2>
+      <p>Configura el endpoint de tu API y envía las líneas seleccionadas.</p>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:8px;">
+          <div style="flex: 1 1 260px;">
+            <label for="apiUrl">URL de tu API:</label>
+            <input
+              type="text"
+              id="apiUrl"
+              style="width: 100%; padding:6px; border-radius:8px; border:1px solid #d1d5db; font-size:0.85rem;"
+              value="https://tu-api.com/inventario/actualizar"
+            />
+          </div>
+          <div>
+            <button id="btnEnviar">Enviar actualización</button>
+          </div>
+        </div>
+        <div class="status" id="envioStatus">Aún no se han enviado datos.</div>
+      </div>
+    </section>
+
+    <!-- Log técnico -->
+    <section>
+      <h2>Log técnico</h2>
+      <p>Registra pasos de lectura, parseo del XML y errores.</p>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+
+  <script>
+    const inputXml = document.getElementById("xmlFile");
+    const btnProcesar = document.getElementById("btnProcesar");
+    const statusText = document.getElementById("statusText");
+    const tablaBody = document.getElementById("tablaInventarioBody");
+    const logEl = document.getElementById("log");
+    const btnEnviar = document.getElementById("btnEnviar");
+    const apiUrlInput = document.getElementById("apiUrl");
+    const envioStatus = document.getElementById("envioStatus");
+    const btnLimpiarTabla = document.getElementById("btnLimpiarTabla");
+    const xmlRawTextarea = document.getElementById("xmlRaw");
+    const invoiceHeaderPreview = document.getElementById("invoiceHeaderPreview");
+    const invoiceLinesPreviewBody = document.getElementById("invoiceLinesPreviewBody");
+
+    let currentXmlText = "";
+
+    function log(msg) {
+      const time = new Date().toISOString().substring(11, 19);
+      logEl.textContent += `[${time}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Helpers genéricos para leer tags / atributos
+    function getTagOrAttr(node, names) {
+      for (const name of names) {
+        const el = node.getElementsByTagName(name)[0];
+        if (el && el.textContent && el.textContent.trim().length > 0) {
+          return el.textContent;
+        }
+      }
+      for (const name of names) {
+        const attr = node.getAttribute && node.getAttribute(name);
+        if (attr && attr.trim().length > 0) {
+          return attr;
+        }
+      }
+      return null;
+    }
+
+    function getTextFromNode(node, names) {
+      const value = getTagOrAttr(node, names);
+      if (value === null) return "";
+      return value.trim();
+    }
+
+    // 1) Selección de archivo: leer, mostrar XML crudo y vista de factura
+    inputXml.addEventListener("change", () => {
+      if (!inputXml.files || inputXml.files.length === 0) {
+        statusText.textContent = "Sin archivo cargado.";
+        btnProcesar.disabled = true;
+        xmlRawTextarea.value = "";
+        currentXmlText = "";
+        invoiceHeaderPreview.innerHTML = "<p>No hay XML cargado.</p>";
+        invoiceLinesPreviewBody.innerHTML = "<tr><td colspan='5'>Sin datos de detalle.</td></tr>";
+        return;
+      }
+
+      const file = inputXml.files[0];
+      statusText.textContent = "Leyendo XML...";
+      log(`Inicio de lectura de XML: ${file.name}`);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentXmlText = e.target.result;
+        xmlRawTextarea.value = currentXmlText;
+        statusText.textContent = "XML cargado. Vista previa y resumen de factura actualizados.";
+        log("XML leído correctamente y mostrado en la vista previa.");
+        btnProcesar.disabled = false;
+
+        try {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(currentXmlText, "application/xml");
+          if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+            throw new Error("Error al parsear el XML. Revisa el formato del archivo.");
+          }
+          const invoiceData = parseInvoicePreview(xmlDoc);
+          renderInvoicePreview(invoiceData);
+        } catch (error) {
+          console.error(error);
+          log("ERROR al interpretar la factura: " + (error.message || error));
+          invoiceHeaderPreview.innerHTML = "<p>No se pudo interpretar la factura desde este XML.</p>";
+          invoiceLinesPreviewBody.innerHTML = "<tr><td colspan='5'>Sin datos de detalle.</td></tr>";
+        }
+      };
+      reader.onerror = () => {
+        statusText.textContent = "Error leyendo el archivo XML.";
+        log("ERROR: fallo FileReader al leer el archivo.");
+        btnProcesar.disabled = true;
+      };
+
+      reader.readAsText(file, "utf-8");
+    });
+
+    // 2) Procesar XML a inventario (para stock)
+    btnProcesar.addEventListener("click", () => {
+      if (!currentXmlText || currentXmlText.trim().length === 0) {
+        alert("No hay XML cargado. Selecciona un archivo primero.");
+        return;
+      }
+
+      statusText.textContent = "Parseando XML a inventario...";
+      log("Comenzando parseo del XML actual para inventario.");
+
+      try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(currentXmlText, "application/xml");
+
+        if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+          throw new Error("Error al parsear el XML. Revisa el formato del archivo.");
+        }
+
+        const items = parseInventoryFromXml(xmlDoc);
+        renderTablaInventario(items);
+
+        statusText.textContent = `Se detectaron ${items.length} líneas de inventario.`;
+        log(`Extracción completa. Items detectados: ${items.length}`);
+      } catch (error) {
+        console.error(error);
+        statusText.textContent = "Error al procesar el XML.";
+        log(`ERROR: ${error.message || error}`);
+      }
+    });
+
+    /**
+     * Vista de factura: cabecera + detalle (para humanos).
+     * Se intenta soportar DTE chileno y estructuras genéricas.
+     */
+    function parseInvoicePreview(xmlDoc) {
+      // Header node típico: Encabezado, Header, Cabecera, etc.
+      const headerTags = ["Encabezado", "Header", "Cabecera", "InvoiceHeader", "DocumentHeader"];
+      let headerNode = null;
+      for (const tag of headerTags) {
+        const n = xmlDoc.getElementsByTagName(tag)[0];
+        if (n) {
+          headerNode = n;
+          break;
+        }
+      }
+      if (!headerNode) {
+        // Fallback: en DTE chileno suele ser DTE > Documento > Encabezado
+        const docNode = xmlDoc.getElementsByTagName("Documento")[0];
+        const encNode = docNode && docNode.getElementsByTagName("Encabezado")[0];
+        headerNode = encNode || xmlDoc.documentElement;
+      }
+
+      const header = {
+        folio: getTextFromNode(headerNode, ["Folio", "NumDoc", "Numero", "DocumentNumber"]),
+        fecha: getTextFromNode(headerNode, ["FchEmis", "FechaEmision", "Fecha", "IssueDate"]),
+        emisorNombre: getTextFromNode(headerNode, ["RznSoc", "RazonSocialEmisor", "NombreEmisor", "SellerName"]),
+        emisorId: getTextFromNode(headerNode, ["RUTEmisor", "NIFEmisor", "TaxIDEmisor", "VATNumber"]),
+        receptorNombre: getTextFromNode(headerNode, ["RznSocRecep", "RazonSocialReceptor", "NombreReceptor", "BuyerName"]),
+        receptorId: getTextFromNode(headerNode, ["RUTRecep", "NIFReceptor", "TaxIDReceptor", "BuyerTaxID"]),
+        total: getTextFromNode(headerNode, ["MntTotal", "TotalFactura", "Total", "GrandTotal"])
+      };
+
+      const candidateLineTags = ["Detalle", "Item", "Linea", "Concepto", "Product", "Producto", "InvoiceLine"];
+      let lineNodes = [];
+      for (const tag of candidateLineTags) {
+        const found = Array.from(xmlDoc.getElementsByTagName(tag));
+        if (found.length > 0) {
+          lineNodes = lineNodes.concat(found);
+        }
+      }
+
+      const lines = [];
+      for (const node of lineNodes) {
+        const code = getTextFromNode(node, ["VlrCodigo", "CodItem", "Codigo", "SKU", "ItemCode"]);
+        const desc = getTextFromNode(node, ["NmbItem", "Descripcion", "Nombre", "ItemName", "Detalle"]);
+        const qty = getTextFromNode(node, ["QtyItem", "Cantidad", "Cant", "Quantity"]);
+        const price = getTextFromNode(node, ["PrcItem", "Precio", "PUnit", "Price", "UnitPrice"]);
+        const lineTotal = getTextFromNode(node, ["MontoItem", "Total", "Monto", "LineExtensionAmount"]);
+
+        if (!code && !desc && !qty) continue;
+
+        lines.push({ code, desc, qty, price, lineTotal });
+      }
+
+      return { header, lines };
+    }
+
+    function renderInvoicePreview(data) {
+      invoiceLinesPreviewBody.innerHTML = "";
+
+      if (!data) {
+        invoiceHeaderPreview.innerHTML = "<p>No se pudo interpretar la factura desde este XML.</p>";
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.textContent = "Sin datos de detalle.";
+        tr.appendChild(td);
+        invoiceLinesPreviewBody.appendChild(tr);
+        return;
+      }
+
+      const h = data.header || {};
+
+      invoiceHeaderPreview.innerHTML = `
+        <div class="invoice-header-grid">
+          <div>
+            <strong>Folio</strong>
+            <span>${h.folio || "—"}</span>
+          </div>
+          <div>
+            <strong>Fecha emisión</strong>
+            <span>${h.fecha || "—"}</span>
+          </div>
+          <div>
+            <strong>Emisor</strong>
+            <span>${(h.emisorNombre || "—") + (h.emisorId ? " (" + h.emisorId + ")" : "")}</span>
+          </div>
+          <div>
+            <strong>Receptor</strong>
+            <span>${(h.receptorNombre || "—") + (h.receptorId ? " (" + h.receptorId + ")" : "")}</span>
+          </div>
+          <div>
+            <strong>Total factura</strong>
+            <span>${h.total || "—"}</span>
+          </div>
+        </div>
+      `;
+
+      if (!data.lines || data.lines.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.textContent = "No se detectaron líneas de productos. Es posible que la estructura del XML sea distinta.";
+        tr.appendChild(td);
+        invoiceLinesPreviewBody.appendChild(tr);
+        return;
+      }
+
+      for (const line of data.lines) {
+        const tr = document.createElement("tr");
+
+        const tdCode = document.createElement("td");
+        tdCode.textContent = line.code || "";
+
+        const tdDesc = document.createElement("td");
+        tdDesc.textContent = line.desc || "";
+
+        const tdQty = document.createElement("td");
+        tdQty.textContent = line.qty || "";
+
+        const tdPrice = document.createElement("td");
+        tdPrice.textContent = line.price || "";
+
+        const tdTotal = document.createElement("td");
+        tdTotal.textContent = line.lineTotal || "";
+
+        tr.appendChild(tdCode);
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdQty);
+        tr.appendChild(tdPrice);
+        tr.appendChild(tdTotal);
+
+        invoiceLinesPreviewBody.appendChild(tr);
+      }
+    }
+
+    /**
+     * Parseo orientado a inventario (stock).
+     * Aquí puedes endurecer lógica según cómo venga tu XML.
+     */
+    function parseInventoryFromXml(xmlDoc) {
+      const items = [];
+
+      const candidateTags = ["item", "producto", "product", "row", "linea", "registro", "Detalle"];
+      let productNodes = [];
+      for (const tag of candidateTags) {
+        const found = Array.from(xmlDoc.getElementsByTagName(tag));
+        if (found.length > 0) {
+          log(`Se encontraron ${found.length} nodos <${tag}> como posibles productos para inventario.`);
+          productNodes = productNodes.concat(found);
+        }
+      }
+
+      if (productNodes.length === 0) {
+        log("No se encontraron nodos de productos con tags estándar. Fallback genérico para inventario.");
+        const allElements = Array.from(xmlDoc.getElementsByTagName("*"));
+        productNodes = allElements.filter(el => {
+          return (
+            getTagOrAttr(el, ["cantidad", "stock", "qty", "existencia"]) !== null &&
+            getTagOrAttr(el, ["sku", "codigo", "cod", "id", "idProducto", "CodItem"]) !== null
+          );
+        });
+        log(`Fallback inventario: se encontraron ${productNodes.length} nodos candidatos a producto.`);
+      }
+
+      for (const node of productNodes) {
+        const sku = getTextFromNode(node, ["sku", "codigo", "cod", "id", "idProducto", "CodItem", "VlrCodigo"]);
+        const descripcion = getTextFromNode(node, ["descripcion", "nombre", "detalle", "desc", "NmbItem"]);
+        const cantidadStr = getTextFromNode(node, ["cantidad", "stock", "qty", "existencia", "QtyItem"]);
+        const qty = parseInt(cantidadStr, 10);
+
+        if (!sku || !descripcion || isNaN(qty)) {
+          continue;
+        }
+
+        items.push({
+          sku: sku,
+          descripcion: descripcion,
+          cantidadXml: qty,
+          nuevaCantidad: qty
+        });
+      }
+
+      return items;
+    }
+
+    function renderTablaInventario(items) {
+      tablaBody.innerHTML = "";
+
+      if (!items || items.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.textContent = "No se detectaron líneas de inventario. Ajusta parseInventoryFromXml según la estructura real del XML.";
+        tr.appendChild(td);
+        tablaBody.appendChild(tr);
+        return;
+      }
+
+      for (const item of items) {
+        const tr = document.createElement("tr");
+
+        const tdCheck = document.createElement("td");
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.checked = true;
+        tdCheck.appendChild(check);
+
+        const tdSku = document.createElement("td");
+        tdSku.textContent = item.sku;
+
+        const tdDesc = document.createElement("td");
+        tdDesc.textContent = item.descripcion;
+
+        const tdQtyXml = document.createElement("td");
+        tdQtyXml.textContent = item.cantidadXml;
+
+        const tdNuevaQty = document.createElement("td");
+        const inputQty = document.createElement("input");
+        inputQty.type = "number";
+        inputQty.value = item.nuevaCantidad;
+        inputQty.min = "0";
+        tdNuevaQty.appendChild(inputQty);
+
+        tr.appendChild(tdCheck);
+        tr.appendChild(tdSku);
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdQtyXml);
+        tr.appendChild(tdNuevaQty);
+
+        tablaBody.appendChild(tr);
+      }
+    }
+
+    btnEnviar.addEventListener("click", async () => {
+      const apiUrl = apiUrlInput.value.trim();
+      if (!apiUrl) {
+        alert("Debes indicar la URL de tu API.");
+        return;
+      }
+
+      const payload = [];
+      const rows = tablaBody.querySelectorAll("tr");
+
+      rows.forEach(row => {
+        const checkbox = row.querySelector('input[type="checkbox"]');
+        if (!checkbox || !checkbox.checked) return;
+
+        const celdas = row.querySelectorAll("td");
+        if (celdas.length < 5) return;
+
+        const sku = celdas[1].textContent.trim();
+        const descripcion = celdas[2].textContent.trim();
+        const cantidadXml = parseInt(celdas[3].textContent.trim(), 10);
+        const nuevaCantidadInput = celdas[4].querySelector('input[type="number"]');
+        const nuevaCantidad = parseInt(nuevaCantidadInput.value, 10);
+
+        if (!sku || isNaN(nuevaCantidad)) return;
+
+        payload.push({
+          sku,
+          descripcion,
+          cantidadXml,
+          nuevaCantidad
+        });
+      });
+
+      if (payload.length === 0) {
+        alert("No hay líneas seleccionadas para actualizar.");
+        return;
+      }
+
+      log(`Enviando ${payload.length} items a la API: ${apiUrl}`);
+      envioStatus.textContent = "Enviando datos...";
+
+      try {
+        const resp = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ items: payload })
+        });
+
+        if (!resp.ok) {
+          throw new Error(`Respuesta HTTP no ok: ${resp.status}`);
+        }
+
+        const data = await resp.json().catch(() => ({}));
+        envioStatus.textContent = "Actualización enviada correctamente.";
+        log(`Respuesta API OK: ${JSON.stringify(data).substring(0, 400)}...`);
+      } catch (error) {
+        console.error(error);
+        envioStatus.textContent = "Error al enviar actualización. Revisa el log.";
+        log(`ERROR envío API: ${error.message || error}`);
+      }
+    });
+
+    btnLimpiarTabla.addEventListener("click", () => {
+      tablaBody.innerHTML = "";
+      statusText.textContent = "Tabla vacía. Procesa nuevamente el XML si quieres reconstruir el inventario.";
+      log("Tabla de inventario limpiada por el usuario.");
+    });
+  </script>
+</body>
+</html>
